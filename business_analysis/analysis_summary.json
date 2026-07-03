@@ -1,0 +1,31 @@
+{
+  "total_articles": 105542,
+  "purchase_below_5_pct": 14.8,
+  "hot_articles_pct": 7.4,
+  "hot_sales_pct": 53.5,
+  "active_null_pct": 66.0,
+  "has_transaction_pct": 99.3,
+  "rfm_segments": {
+    "高价值活跃": {
+      "user_pct": 10.5,
+      "gmv_pct": 39.0
+    },
+    "活跃用户": {
+      "user_pct": 20.6
+    },
+    "潜在流失": {
+      "user_pct": 23.4
+    },
+    "已流失": {
+      "user_pct": 18.8
+    },
+    "一般用户": {
+      "user_pct": 26.7
+    }
+  },
+  "single_price_band_pct": 99.0,
+  "online_pct": 29.6,
+  "offline_pct": 70.4,
+  "weekend_pct": 28.6,
+  "monthly_kpi_count": 25
+}

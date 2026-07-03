@@ -13,8 +13,7 @@ sample_submission.csv
 # 处理后的大文件（processed/ 下有4.2GB的fact_transaction）
 processed/
 
-# 经营分析CSV输出（可选提交，取决于大小）
-business_analysis/
+# 经营分析CSV输出（已提交）
 
 # Python
 __pycache__/
