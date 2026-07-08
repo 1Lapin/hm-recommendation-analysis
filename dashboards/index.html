@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1500,initial-scale=1.0">
+<title>H&M 全阶段经营分析 · 交互看板</title>
+<script src="chart.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;background:#0a0e27;color:#e0e6ed;display:flex;min-height:100vh}
+.sidebar{width:220px;background:linear-gradient(180deg,#0d1335 0%,#0a0e27 100%);border-right:1px solid rgba(255,255,255,0.06);padding:20px 0;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:100}
+.sidebar-logo{padding:0 16px 16px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:12px}
+.sidebar-logo h2{font-size:15px;font-weight:700;color:#fff;letter-spacing:1px}
+.sidebar-logo .sub{font-size:10px;color:#4a5568;margin-top:2px}
+.sidebar-nav{list-style:none}
+.sidebar-nav li{margin:1px 0}
+.sidebar-nav li a{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#6b7c93;text-decoration:none;font-size:12px;transition:all 0.2s;border-left:3px solid transparent;cursor:pointer}
+.sidebar-nav li a:hover{color:#c8d2e0;background:rgba(255,255,255,0.03)}
+.sidebar-nav li a.active{color:#60a5fa;background:rgba(96,165,250,0.08);border-left-color:#60a5fa;font-weight:600}
+.main{margin-left:220px;flex:1;padding:20px;min-width:0}
+.panel{display:none}
+.panel.active{display:block}
+.panel-header{margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.panel-header h2{font-size:20px;font-weight:700;color:#fff;letter-spacing:.5px}
+.panel-header .desc{font-size:11px;color:#4a5568;margin-top:4px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.kpi-card{background:linear-gradient(135deg,#131a3a 0%,#0f1535 100%);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:18px 20px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;border-radius:2px}
+.kpi-card.c-green::before{background:#00d4aa}
+.kpi-card.c-blue::before{background:#60a5fa}
+.kpi-card.c-amber::before{background:#f59e0b}
+.kpi-card.c-purple::before{background:#a78bfa}
+.kpi-card.c-red::before{background:#ef4444}
+.kpi-label{font-size:11px;color:#6b7c93;margin-bottom:4px;letter-spacing:.5px}
+.kpi-value{font-size:28px;font-weight:700;color:#fff;line-height:1.2}
+.kpi-value .unit{font-size:14px;font-weight:400;color:#6b7c93}
+.kpi-sub{font-size:10px;color:#4a5568;margin-top:4px}
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px;margin-bottom:20px}
+.chart-grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.chart-grid.cols-1{grid-template-columns:1fr}
+.chart-box{background:linear-gradient(135deg,#131a3a 0%,#0f1535 100%);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:18px 22px}
+.chart-box.full{grid-column:1/-1}
+.chart-box h3{font-size:13px;font-weight:600;color:#c8d2e0;margin-bottom:10px;letter-spacing:.5px}
+.chart-wrap{position:relative;width:100%;height:280px}
+.chart-wrap canvas{width:100%!important}
+.data-table{width:100%;border-collapse:collapse;font-size:11px}
+.data-table th{background:rgba(96,165,250,0.12);color:#60a5fa;font-weight:600;text-align:left;padding:8px 12px;font-size:10px;letter-spacing:.5px}
+.data-table td{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.04);color:#c8d2e0}
+.data-table tr:hover td{background:rgba(255,255,255,0.02)}
+.hl{color:#00d4aa;font-weight:600}
+.wn{color:#f59e0b;font-weight:600}
+.dn{color:#ef4444;font-weight:600}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600;letter-spacing:.5px}
+.tag-done{background:rgba(0,212,170,0.15);color:#00d4aa}
+.tag-prog{background:rgba(245,158,11,0.15);color:#f59e0b}
+.tag-plan{background:rgba(96,165,250,0.15);color:#60a5fa}
+.insight-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:20px}
+.insight-card{border-radius:10px;padding:18px 20px;border:1px solid rgba(255,255,255,0.06)}
+.insight-card.growth{background:linear-gradient(135deg,rgba(0,212,170,0.06) 0%,rgba(0,212,170,0.02) 100%);border-color:rgba(0,212,170,0.12)}
+.insight-card.opportunity{background:linear-gradient(135deg,rgba(245,158,11,0.06) 0%,rgba(245,158,11,0.02) 100%);border-color:rgba(245,158,11,0.12)}
+.insight-card.action{background:linear-gradient(135deg,rgba(96,165,250,0.06) 0%,rgba(96,165,250,0.02) 100%);border-color:rgba(96,165,250,0.12)}
+.insight-card .icon{font-size:18px;margin-bottom:6px}
+.insight-card h4{font-size:13px;color:#fff;margin-bottom:6px}
+.insight-card p{font-size:11px;color:#94a3b8;line-height:1.6}
+.contradiction-row{display:flex;gap:12px;margin-top:8px}
+.contradiction-row>div{flex:1;border-radius:8px;padding:12px;font-size:11px}
+.contradiction-row h4{font-size:12px;margin-bottom:6px}
+.contradiction-row p{color:#94a3b8;line-height:1.5}
+.price-viz{display:flex;align-items:center;gap:16px;padding:16px 0}
+.price-viz .pv-box{text-align:center;flex:1}
+.price-viz .pv-box .pv-num{font-size:24px;font-weight:700}
+.price-viz .pv-arrow{font-size:20px;color:#4a5568}
+.exp-flow{display:flex;align-items:center;gap:12px;padding:16px;background:rgba(255,255,255,0.02);border-radius:8px;font-size:11px;margin:10px 0}
+.exp-box{background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:8px;padding:12px 14px;text-align:center;min-width:90px}
+.exp-box h5{color:#fff;font-size:11px;margin-bottom:4px}
+.exp-box p{color:#6b7c93;font-size:10px;line-height:1.5}
+.exp-arrow{color:#4a5568;font-size:16px}
+ul.info-list{font-size:11px;color:#94a3b8;line-height:2;list-style:disc;padding-left:18px}
+ul.info-list li b.c1{color:#60a5fa}
+ul.info-list li b.c2{color:#00d4aa}
+ul.info-list li b.c3{color:#f59e0b}
+ul.info-list li b.c4{color:#a78bfa}
+.strategy-table{width:100%;border-collapse:collapse;font-size:10px;margin-top:8px}
+.strategy-table th{background:rgba(96,165,250,0.12);color:#60a5fa;font-weight:600;padding:8px 6px;text-align:center;font-size:10px}
+.strategy-table td{padding:6px;border-bottom:1px solid rgba(255,255,255,0.04);color:#c8d2e0;text-align:center}
+.strategy-table tr:hover td{background:rgba(255,255,255,0.02)}
+pre.code{font-size:10px;color:#94a3b8;line-height:1.8;margin:0}
+@media(max-width:1200px){.chart-grid{grid-template-columns:1fr}.chart-grid.cols-3{grid-template-columns:1fr}}
+@media(max-width:900px){.sidebar{width:160px}.main{margin-left:160px}.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.sidebar{display:none}.main{margin-left:0}.kpi-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+<div class="sidebar-logo"><h2>H&M 经营分析</h2><div class="sub">GMV Growth Command Center</div></div>
+<ul class="sidebar-nav" id="nav"></ul>
+</nav>
+
+<div class="main" id="main"></div>
+
+<script>
+// ============================================================
+// 加载数据 & 渲染所有面板
+// ============================================================
+const DATA = {
+  "panel4": {
+    "total_arts": 105542,
+    "below_5": 15664,
+    "below_5_pct": 14.8,
+    "hot": 7814,
+    "hot_pct": 7.4,
+    "hot_sales_pct": 53.5,
+    "active_1_before": 464404,
+    "active_null_before": 907576,
+    "active_fixed": 1365786,
+    "has_txn_pct": 99.3,
+    "tier_data": [
+      {
+        "tier": "冷启动(≤3次)",
+        "count": 11317
+      },
+      {
+        "tier": "长尾(4-5次)",
+        "count": 4347
+      },
+      {
+        "tier": "常规(6-100次)",
+        "count": 45412
+      },
+      {
+        "tier": "热门(101-999次)",
+        "count": 36662
+      },
+      {
+        "tier": "爆款(≥1000次)",
+        "count": 7804
+      }
+    ]
+  },
+  "panel5": {
+    "rfm_rows": [
+      {
+        "segment": "高价值活跃",
+        "users": 142665,
+        "user_pct": 10.5,
+        "gmv_pct": 39.0,
+        "avg_freq": 83.6,
+        "avg_recency": 12.0,
+        "interval": 10.0
+      },
+      {
+        "segment": "活跃用户",
+        "users": 278725,
+        "user_pct": 20.6,
+        "gmv_pct": 31.0,
+        "avg_freq": 36.0,
+        "avg_recency": 48.0,
+        "interval": 19.0
+      },
+      {
+        "segment": "潜在流失",
+        "users": 317919,
+        "user_pct": 23.4,
+        "gmv_pct": 13.0,
+        "avg_freq": 12.8,
+        "avg_recency": 99.0,
+        "interval": 14.0
+      },
+      {
+        "segment": "已流失",
+        "users": 255381,
+        "user_pct": 18.8,
+        "gmv_pct": 2.0,
+        "avg_freq": 1.9,
+        "avg_recency": 476.0,
+        "interval": 0.0
+      },
+      {
+        "segment": "一般用户",
+        "users": 361442,
+        "user_pct": 26.7,
+        "gmv_pct": 16.0,
+        "avg_freq": 13.8,
+        "avg_recency": 405.0,
+        "interval": 9.0
+      }
+    ],
+    "kpi_rows": [
+      {
+        "month": "2018-09",
+        "txns": 594776,
+        "users": 140340,
+        "gmv": 17755.6,
+        "price": 0.0299,
+        "freq": 4.24,
+        "online": 34.9,
+        "weekend": 42.0
+      },
+      {
+        "month": "2018-10",
+        "txns": 1397040,
+        "users": 274220,
+        "gmv": 41584.8,
+        "price": 0.0298,
+        "freq": 5.09,
+        "online": 30.3,
+        "weekend": 24.6
+      },
+      {
+        "month": "2018-11",
+        "txns": 1270619,
+        "users": 274207,
+        "gmv": 39001.0,
+        "price": 0.0307,
+        "freq": 4.63,
+        "online": 28.3,
+        "weekend": 28.8
+      },
+      {
+        "month": "2018-12",
+        "txns": 1148827,
+        "users": 254059,
+        "gmv": 32532.5,
+        "price": 0.0283,
+        "freq": 4.52,
+        "online": 38.5,
+        "weekend": 33.0
+      },
+      {
+        "month": "2019-01",
+        "txns": 1263471,
+        "users": 242024,
+        "gmv": 33450.0,
+        "price": 0.0265,
+        "freq": 5.22,
+        "online": 26.2,
+        "weekend": 26.0
+      },
+      {
+        "month": "2019-02",
+        "txns": 1152412,
+        "users": 238992,
+        "gmv": 31428.2,
+        "price": 0.0273,
+        "freq": 4.82,
+        "online": 32.6,
+        "weekend": 30.7
+      },
+      {
+        "month": "2019-03",
+        "txns": 1286750,
+        "users": 244166,
+        "gmv": 37549.0,
+        "price": 0.0292,
+        "freq": 5.27,
+        "online": 28.1,
+        "weekend": 33.3
+      },
+      {
+        "month": "2019-04",
+        "txns": 1476454,
+        "users": 260875,
+        "gmv": 42825.0,
+        "price": 0.029,
+        "freq": 5.66,
+        "online": 30.0,
+        "weekend": 27.8
+      },
+      {
+        "month": "2019-05",
+        "txns": 1560319,
+        "users": 271554,
+        "gmv": 43357.5,
+        "price": 0.0278,
+        "freq": 5.75,
+        "online": 31.5,
+        "weekend": 23.3
+      },
+      {
+        "month": "2019-06",
+        "txns": 1906202,
+        "users": 305190,
+        "gmv": 48648.4,
+        "price": 0.0255,
+        "freq": 6.25,
+        "online": 29.7,
+        "weekend": 29.9
+      },
+      {
+        "month": "2019-07",
+        "txns": 1807494,
+        "users": 296683,
+        "gmv": 40387.1,
+        "price": 0.0223,
+        "freq": 6.09,
+        "online": 32.0,
+        "weekend": 22.0
+      },
+      {
+        "month": "2019-08",
+        "txns": 1253530,
+        "users": 234891,
+        "gmv": 30545.8,
+        "price": 0.0244,
+        "freq": 5.34,
+        "online": 32.2,
+        "weekend": 26.3
+      },
+      {
+        "month": "2019-09",
+        "txns": 1227178,
+        "users": 244046,
+        "gmv": 40304.0,
+        "price": 0.0328,
+        "freq": 5.03,
+        "online": 27.3,
+        "weekend": 38.3
+      },
+      {
+        "month": "2019-10",
+        "txns": 1146772,
+        "users": 254146,
+        "gmv": 36987.7,
+        "price": 0.0323,
+        "freq": 4.51,
+        "online": 30.8,
+        "weekend": 24.8
+      },
+      {
+        "month": "2019-11",
+        "txns": 1198033,
+        "users": 270069,
+        "gmv": 38854.4,
+        "price": 0.0324,
+        "freq": 4.44,
+        "online": 27.3,
+        "weekend": 29.7
+      },
+      {
+        "month": "2019-12",
+        "txns": 1118315,
+        "users": 262250,
+        "gmv": 31267.6,
+        "price": 0.028,
+        "freq": 4.26,
+        "online": 38.9,
+        "weekend": 32.1
+      },
+      {
+        "month": "2020-01",
+        "txns": 1076354,
+        "users": 231018,
+        "gmv": 28793.6,
+        "price": 0.0268,
+        "freq": 4.66,
+        "online": 29.5,
+        "weekend": 28.0
+      },
+      {
+        "month": "2020-02",
+        "txns": 1001859,
+        "users": 226853,
+        "gmv": 28792.9,
+        "price": 0.0287,
+        "freq": 4.42,
+        "online": 32.4,
+        "weekend": 31.6
+      },
+      {
+        "month": "2020-03",
+        "txns": 1047752,
+        "users": 212243,
+        "gmv": 30274.2,
+        "price": 0.0289,
+        "freq": 4.94,
+        "online": 14.7,
+        "weekend": 29.5
+      },
+      {
+        "month": "2020-04",
+        "txns": 1340882,
+        "users": 228713,
+        "gmv": 37808.5,
+        "price": 0.0282,
+        "freq": 5.86,
+        "online": null,
+        "weekend": 36.0
+      },
+      {
+        "month": "2020-05",
+        "txns": 1361815,
+        "users": 247187,
+        "gmv": 37145.7,
+        "price": 0.0273,
+        "freq": 5.51,
+        "online": 28.8,
+        "weekend": 29.0
+      },
+      {
+        "month": "2020-06",
+        "txns": 1764507,
+        "users": 305018,
+        "gmv": 43055.4,
+        "price": 0.0244,
+        "freq": 5.78,
+        "online": 33.5,
+        "weekend": 24.1
+      },
+      {
+        "month": "2020-07",
+        "txns": 1351502,
+        "users": 267924,
+        "gmv": 32363.0,
+        "price": 0.0239,
+        "freq": 5.04,
+        "online": 39.6,
+        "weekend": 21.9
+      },
+      {
+        "month": "2020-08",
+        "txns": 1237192,
+        "users": 254163,
+        "gmv": 33130.5,
+        "price": 0.0268,
+        "freq": 4.87,
+        "online": 33.3,
+        "weekend": 27.4
+      },
+      {
+        "month": "2020-09",
+        "txns": 798269,
+        "users": 189510,
+        "gmv": 26803.4,
+        "price": 0.0336,
+        "freq": 4.21,
+        "online": 31.4,
+        "weekend": 28.3
+      }
+    ],
+    "freq_hist": [
+      {
+        "range": "1-3次",
+        "count": 352645
+      },
+      {
+        "range": "4-9次",
+        "count": 330604
+      },
+      {
+        "range": "10-27次",
+        "count": 342429
+      },
+      {
+        "range": "28-60次",
+        "count": 198686
+      },
+      {
+        "range": "61-100次",
+        "count": 76427
+      },
+      {
+        "range": "101-500次",
+        "count": 54874
+      },
+      {
+        "range": "500+次",
+        "count": 467
+      }
+    ],
+    "rec_hist": [
+      {
+        "range": "0-7天",
+        "count": 83414
+      },
+      {
+        "range": "8-30天",
+        "count": 167292
+      },
+      {
+        "range": "31-90天",
+        "count": 290526
+      },
+      {
+        "range": "91-180天",
+        "count": 198077
+      },
+      {
+        "range": "181-365天",
+        "count": 252913
+      },
+      {
+        "range": "365天+",
+        "count": 363910
+      }
+    ],
+    "freq_d": {
+      "p25": 3.0,
+      "p50": 9.0,
+      "p75": 27.0,
+      "p90": 59.0,
+      "mean": 23.244020493580273
+    },
+    "iv_d": {
+      "p25": 0.0,
+      "p50": 10.983333333333333,
+      "p75": 25.444444444444443,
+      "p90": 50.5
+    }
+  },
+  "panel6": {
+    "cat_top10": [
+      {
+        "dept": "Swimwear",
+        "count": 2495122
+      },
+      {
+        "dept": "Trouser",
+        "count": 1742298
+      },
+      {
+        "dept": "Blouse",
+        "count": 1651060
+      },
+      {
+        "dept": "Knitwear",
+        "count": 1598097
+      },
+      {
+        "dept": "Jersey",
+        "count": 1526503
+      },
+      {
+        "dept": "Jersey Basic",
+        "count": 1469357
+      },
+      {
+        "dept": "Expressive Lingerie",
+        "count": 1196062
+      },
+      {
+        "dept": "Jersey fancy",
+        "count": 1156697
+      },
+      {
+        "dept": "Basic 1",
+        "count": 1140599
+      },
+      {
+        "dept": "Dress",
+        "count": 1114750
+      }
+    ],
+    "online_dom": 353423,
+    "offline_dom": 813506,
+    "mixed_ch": 189203,
+    "total_u": 1356132,
+    "weekend_pct": 29.1,
+    "online_pct": 30.9
+  },
+  "panel7": {
+    "dept_diff10": [
+      {
+        "dept": "Swimwear",
+        "online_pct": 4.2,
+        "offline_pct": 9.4,
+        "diff": -5.2,
+        "abs_diff": 5.2
+      },
+      {
+        "dept": "Jersey",
+        "online_pct": 3.6,
+        "offline_pct": 5.3,
+        "diff": -1.7,
+        "abs_diff": 1.7
+      },
+      {
+        "dept": "Trousers",
+        "online_pct": 1.4,
+        "offline_pct": 3.1,
+        "diff": -1.6,
+        "abs_diff": 1.6
+      },
+      {
+        "dept": "Jewellery",
+        "online_pct": 2.0,
+        "offline_pct": 0.5,
+        "diff": 1.6,
+        "abs_diff": 1.6
+      },
+      {
+        "dept": "Hair Accessories",
+        "online_pct": 1.6,
+        "offline_pct": 0.2,
+        "diff": 1.5,
+        "abs_diff": 1.5
+      },
+      {
+        "dept": "Knitwear",
+        "online_pct": 6.0,
+        "offline_pct": 4.6,
+        "diff": 1.4,
+        "abs_diff": 1.4
+      },
+      {
+        "dept": "Tights basic",
+        "online_pct": 1.9,
+        "offline_pct": 0.5,
+        "diff": 1.4,
+        "abs_diff": 1.4
+      },
+      {
+        "dept": "Casual Lingerie",
+        "online_pct": 2.6,
+        "offline_pct": 1.3,
+        "diff": 1.3,
+        "abs_diff": 1.3
+      },
+      {
+        "dept": "Dresses",
+        "online_pct": 1.4,
+        "offline_pct": 2.6,
+        "diff": -1.2,
+        "abs_diff": 1.2
+      },
+      {
+        "dept": "Shopbasket Socks",
+        "online_pct": 1.6,
+        "offline_pct": 0.4,
+        "diff": 1.2,
+        "abs_diff": 1.2
+      }
+    ],
+    "age_data": [
+      {
+        "age": "65岁以上",
+        "online": 38.2
+      },
+      {
+        "age": "45-54",
+        "online": 36.5
+      },
+      {
+        "age": "55-64",
+        "online": 35.5
+      },
+      {
+        "age": "18-24",
+        "online": 33.9
+      },
+      {
+        "age": "35-44",
+        "online": 33.2
+      },
+      {
+        "age": "25-34",
+        "online": 31.4
+      },
+      {
+        "age": "17岁以下",
+        "online": 26.9
+      },
+      {
+        "age": "未知",
+        "online": 25.5
+      }
+    ],
+    "online_avg_p": 0.024,
+    "offline_avg_p": 0.031,
+    "price_ratio": 0.77,
+    "online_txn_pct": 30.9
+  }
+};
+
+// ============= 侧边导航 =============
+const panels = [
+  {id:'panel1', icon:'📋', title:'项目概述'},
+  {id:'panel2', icon:'🏗️', title:'技术架构'},
+  {id:'panel3', icon:'⚙️', title:'数据管道(ETL)'},
+  {id:'panel4', icon:'🔍', title:'业务诊断'},
+  {id:'panel5', icon:'📊', title:'绩效拆解(RFM)'},
+  {id:'panel6', icon:'👤', title:'用户分析'},
+  {id:'panel7', icon:'📡', title:'渠道分析'},
+  {id:'panel8', icon:'🎯', title:'推荐策略设计'},
+  {id:'panel9', icon:'🧪', title:'A/B测试框架'},
+  {id:'panel10', icon:'🏆', title:'成果与展望'},
+];
+let navHTML='';
+panels.forEach(p=>{navHTML+=`<li><a href="#${p.id}" onclick="switchPanel('${p.id}')"><span>${p.icon}</span>${p.title}</a></li>`});
+document.getElementById('nav').innerHTML=navHTML;
+
+// ============= 工具函数 =============
+function T(tag,cls='',html=''){return `<${tag} class="${cls}">${html}</${tag}>`}
+function KPI(items){return `<div class="kpi-grid">${items.join('')}</div>`}
+function KC(color,label,value,sub=''){return `<div class="kpi-card c-${color}"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div>${sub?`<div class="kpi-sub">${sub}</div>`:''}</div>`}
+function CHART(id,h=280){return `<div class="chart-box"><h3 id="${id}_title"></h3><div class="chart-wrap" style="height:${h}px"><canvas id="${id}"></canvas></div></div>`}
+function GRID(items,cls=''){return `<div class="chart-grid ${cls}">${items.join('')}</div>`}
+function BOX(h3,body,h){return `<div class="chart-box${h?' full':''}"><h3>${h3}</h3>${body}</div>`}
+function TBL(headers,rows){let h='<tr>'+headers.map(c=>`<th>${c}</th>`).join('')+'</tr>';let b=rows.map(r=>'<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('');return `<table class="data-table">${h}${b}</table>`}
+function INS(type,icon,title,body){return `<div class="insight-card ${type}"><div class="icon">${icon}</div><h4>${title}</h4><p>${body}</p></div>`}
+
+// ============= Dark chart defaults =============
+function mkOpts(extra={}){
+  return Object.assign({
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#6b7c93',font:{size:11},padding:14}},
+      tooltip:{backgroundColor:'rgba(15,21,53,0.95)',titleColor:'#fff',bodyColor:'#c8d2e0',borderColor:'rgba(96,165,250,0.2)',borderWidth:1,padding:12}},
+    scales:{x:{ticks:{color:'#4a5568',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},
+            y:{ticks:{color:'#4a5568',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}
+  },extra);
+}
+const COLORS=['#60a5fa','#00d4aa','#f59e0b','#a78bfa','#ef4444','#34d399','#fbbf24','#818cf8','#fb7185','#38bdf8'];
+
+// ============================================================
+// BUILD ALL PANELS
+// ============================================================
+let html='';
+
+// ---------- PANEL 1: 项目概述 ----------
+html+=`<div id="panel1" class="panel active">
+<div class="panel-header"><h2>📋 一、项目概述</h2><div class="desc">基于Kaggle H&M个性化时尚推荐竞赛数据，从0到1构建数据驱动的推荐策略体系</div></div>
+${KPI([
+  KC('blue','用户规模','137<span class="unit"> 万</span>','1,371,980 注册用户'),
+  KC('green','商品 SKU','10.5<span class="unit"> 万</span>','105,542 件商品'),
+  KC('amber','交易记录','3,178<span class="unit"> 万</span>','31,788,324 行 · 4.2 GB'),
+  KC('purple','时间跨度','27<span class="unit"> 个月</span>','2018-09-20 ~ 2020-09-22'),
+])}
+${GRID([
+  BOX('🎯 三大核心挑战',TBL(['挑战','数据表现','业务影响'],[
+    [`<span class="wn">商品长尾严重</span>`,'14.8% 商品购买 ≤5次，占据库存大头','库存积压 → 打折清仓 → 利润被蚕食'],
+    [`<span class="wn">用户留存不稳定</span>`,'平均购买间隔大，9000+ 用户零交易','拉新成本是留存的5倍，流失即亏损'],
+    [`<span class="wn">推荐缺乏个性</span>`,'无推荐 = 所有人看到相同首页','点击率低 → 转化低 → GMV 增长乏力'],
+  ])),
+  BOX('📈 项目五阶段推进',TBL(['阶段','核心工作','状态'],[
+    ['Phase 1: 数据处理','CSV → 清洗 → 维度建模 → 特征工程','<span class="tag tag-done">✅ 完成</span>'],
+    ['Phase 2: 经营分析','业务诊断 → RFM分群 → 用户/渠道分析','<span class="tag tag-done">✅ 完成</span>'],
+    ['Phase 3: 策略设计','召回/排序/重排 + 5种推荐策略','<span class="tag tag-done">✅ 完成</span>'],
+    ['Phase 4: 模型训练','DSSM双塔 + FAISS + 排序模型','<span class="tag tag-plan">⏳ 规划中</span>'],
+    ['Phase 5: A/B测试','14天线上实验 + 效果评估','<span class="tag tag-plan">⏳ 规划中</span>'],
+  ])),
+])}
+<div class="insight-cards">
+${INS('growth','🎯','核心假设','如果能为每个用户提供个性化商品推荐，将显著提升点击率、转化率和人均GMV。')}
+${INS('opportunity','🔑','核心增长抓手','提升用户复购频次（频次弹性 >> 客单价弹性）。快时尚本质是"高频低单价"模式。')}
+${INS('action','🔄','核心矛盾','"热门商品垄断、长尾商品曝光不足"——打破这个循环是推荐系统的核心价值。')}
+</div></div>`;
+
+// ---------- PANEL 2: 技术架构 ----------
+html+=`<div id="panel2" class="panel">
+<div class="panel-header"><h2>🏗️ 二、技术架构</h2><div class="desc">六层推荐系统架构 + 技术栈总览</div></div>
+${GRID([
+  BOX('🏛️ 六层推荐系统架构',TBL(['层级','核心功能','技术方案','输入→输出','状态'],[
+    ['① 数据层','原始数据清洗→维度建模→特征宽表','Python Pandas分块读取','CSV→5张主表','<span class="tag tag-done">✅</span>'],
+    ['② 特征工程层','用户特征(20维)+商品特征(15维)','RFM多窗口+品类向量','—','<span class="tag tag-done">✅</span>'],
+    ['③ 召回层','从10万商品中粗筛200候选','DSSM双塔+FAISS','10万→200','<span class="tag tag-plan">⏳</span>'],
+    ['④ 排序层','对200候选精排→Top50','多目标(CTR+CVR+ATC)','200→50','<span class="tag tag-plan">⏳</span>'],
+    ['⑤ 重排层','业务规则:库存/新品/多样性','规则引擎(打散/加权)','50→20','<span class="tag tag-done">✅已设计</span>'],
+    ['⑥ A/B实验层','50%对照组vs50%实验组','哈希分流+t检验+MAB','评估效果','<span class="tag tag-done">✅已设计</span>'],
+  ]),true),
+])}
+${GRID([
+  BOX('🛠️ 技术栈',TBL(['层级','技术','用途'],[
+    ['数据处理','Python(Pandas,NumPy)','3300万行ETL+特征工程'],
+    ['可视化','Tableau 2019','4张Dashboard'],
+    ['版本控制','Git+GitHub','代码文档管理'],
+    ['计划引入','FAISS+PyTorch','向量检索+双塔模型'],
+  ])),
+  BOX('📁 项目文件结构',TBL(['文件','说明'],[
+    ['01_data_pipeline.py','全流程数据管道(6步)·~37分钟'],
+    ['02_business_analysis.py','经营分析脚本·~8分钟'],
+    ['03_boss_dashboard.py','Boss看板生成器'],
+    ['04_interactive_dashboards.py','本交互看板生成器'],
+    ['项目方案_H&M推荐系统.md','总体技术方案'],
+    ['推荐策略设计文档_基于规则.md','5种策略+A/B方案'],
+  ])),
+])}
+<div class="chart-grid"><div class="chart-box full"><h3>⭐ 星型数据模型</h3>
+<pre class="code">fact_transaction (31,788,324行)
+├── customer_id → dim_customer (137万行) ─ age_group, is_active, club_member_status
+├── article_id  → dim_article (10.5万行) ─ category_path, popularity_tier, colour_group
+├── 用户特征 → feature_user_rfm (136万行, 20维) ─ rfm_segment, recency_days, online_ratio
+└── 商品特征 → feature_article_stats (10.4万行, 15维) ─ trend_direction, repurchase_rate</pre>
+</div></div></div>`;
+
+// ---------- PANEL 3: 数据管道(ETL) ----------
+html+=`<div id="panel3" class="panel">
+<div class="panel-header"><h2>⚙️ 三、数据管道（ETL）</h2><div class="desc">01_data_pipeline.py — 6步流程，从原始CSV到特征宽表，~37分钟</div></div>
+${KPI([
+  KC('blue','总处理行数','3,178<span class="unit"> 万</span>','3个原始CSV→9个输出文件'),
+  KC('green','执行耗时','~37<span class="unit"> 分钟</span>','transactions 3.3GB最耗时'),
+  KC('amber','特征维度','20+15','用户RFM 20维·商品协同15维'),
+  KC('purple','输出文件','9<span class="unit"> 个CSV</span>','5张主表+4张Tableau视图'),
+])}
+<div class="chart-grid"><div class="chart-box full"><h3>🔄 Pipeline六步流程</h3>
+${TBL(['步骤','任务','关键操作','产出'],[
+  ['Step1','加载原始数据','读取3个CSV','105,542+1,371,980+31,788,324行'],
+  ['Step2','清洗articles','填充空值+品类路径+热度分层','dim_article·含popularity_tier'],
+  ['Step3','清洗customers','<b>★核心修复:交易行为反推Active</b>(66%空→46万→136万)','dim_customer·含age_group'],
+  ['Step4','处理transactions','时间特征+引用完整性+训练/验证时间划分','fact_transaction·含data_split'],
+  ['Step5','RFM用户特征','多窗口频率(7d/30d/90d)+品类多样性+五层分群','feature_user_rfm·20维'],
+  ['Step6','商品协同特征','趋势方向+回购率+渠道偏好+购买者画像','feature_article_stats·15维'],
+])}</div></div>
+${GRID([
+  BOX('🔧 关键技术决策',`<ul class="info-list">
+    <li><b class="c1">分块读取</b>: 4.2GB fact_transaction, chunksize=500K避免OOM</li>
+    <li><b class="c2">Active字段修复</b>: 66%为空但99.3%有交易→交易行为反推修正</li>
+    <li><b class="c3">按时间划分</b>: 最后7天=验证集，模拟线上"历史预测未来"</li>
+    <li><b class="c4">RFM阈值</b>: 基于数据分布设定，非机械等分</li></ul>`),
+  BOX('⚠️ 数据质量关键发现',TBL(['问题','严重度','处理方式'],[
+    ['66%用户Active为空','<span class="dn">严重</span>','交易行为反推修正'],
+    ['14.8%商品购买≤5次','<span class="wn">中等</span>','重排层冷启动加权15%'],
+    ['fashion_news大小写不一','<span class="wn">中等</span>','统一标准化NONE'],
+    ['detail_desc 416行空值','<span class="hl">轻微</span>','用产品信息自动填充'],
+  ])),
+])}</div>`;
+
+// ---------- PANEL 4: 业务诊断 ----------
+(function(){
+const p4=DATA.panel4;
+let tierLabels=p4.tier_data.map(d=>d.tier);
+let tierCounts=p4.tier_data.map(d=>d.count);
+let tierColors=['rgba(239,68,68,0.7)','rgba(245,158,11,0.7)','rgba(96,165,250,0.7)','rgba(0,212,170,0.7)','rgba(167,139,250,0.7)'];
+let tierBorder=tierColors.map(c=>c.replace('0.7','1'));
+
+html+=`<div id="panel4" class="panel">
+<div class="panel-header"><h2>🔍 四、业务诊断</h2><div class="desc">基于3178万条交易数据诊断业务痛点，找到"热门垄断、长尾消失"的经营核心矛盾</div></div>
+${KPI([
+  KC('red','长尾商品(≤5次)',`${p4.below_5_pct}<span class="unit">%</span>`,`${p4.below_5.toLocaleString()} / ${p4.total_arts.toLocaleString()} SKU`),
+  KC('amber','热门商品(≥1000次)',`${p4.hot_pct}<span class="unit">%</span>`,`贡献 ${p4.hot_sales_pct}% 销量`),
+  KC('blue','Active修复前',`${(p4.active_1_before/10000).toFixed(0)}<span class="unit"> 万</span>`,`66%为空(约${(p4.active_null_before/10000).toFixed(0)}万)`),
+  KC('green','Active修复后',`${(p4.active_fixed/10000).toFixed(0)}<span class="unit"> 万</span>`,`${p4.has_txn_pct}% 用户有实际交易`),
+])}
+${GRID([
+  `<div class="chart-box"><h3>📦 商品热度分层分布</h3><div class="chart-wrap"><canvas id="chart4_tier"></canvas></div></div>`,
+  `<div class="chart-box"><h3>🔴 Active字段修复前后</h3><div class="chart-wrap"><canvas id="chart4_active"></canvas></div></div>`,
+])}
+<div class="chart-box full"><h3>🎯 核心矛盾定位</h3>
+<div class="contradiction-row">
+<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.15)"><h4 style="color:#ef4444">❌ 热门垄断</h4><p>${p4.hot_pct}%热门商品贡献${p4.hot_sales_pct}%销量<br>首页展示面极度狭窄</p></div>
+<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15)"><h4 style="color:#f59e0b">⚠️ 长尾消失</h4><p>${p4.below_5_pct}%商品几乎无曝光机会<br>库存周转效率极低</p></div>
+<div style="background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.15)"><h4 style="color:#60a5fa">🔄 标签失真</h4><p>${Math.round(p4.active_null_before/10000)}万用户活跃状态误判<br>运营无法精准触达</p></div>
+<div style="font-size:20px;display:flex;align-items:center;color:#4a5568;justify-content:center">→</div>
+<div style="background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.15)"><h4 style="color:#00d4aa">💡 恶性循环</h4><p>热门越垄断→长尾越没曝光→用户看到越单一→数据越集中→循环恶化</p></div>
+</div></div></div>`;
+
+// Delayed chart init
+setTimeout(()=>{
+new Chart(document.getElementById('chart4_tier'),{type:'bar',data:{labels:tierLabels,datasets:[{label:'SKU数量',data:tierCounts,backgroundColor:tierColors,borderColor:tierBorder,borderWidth:1,borderRadius:4}]},options:mkOpts({indexAxis:'y'})});
+let a1=Math.round(p4.active_1_before/10000),a2=Math.round(p4.active_null_before/10000),a3=Math.round(p4.active_fixed/10000);
+new Chart(document.getElementById('chart4_active'),{type:'bar',data:{labels:['Active="1.0"','Active为空','修正后活跃'],datasets:[{label:'用户数(万)',data:[a1,a2,a3],backgroundColor:['rgba(96,165,250,0.7)','rgba(239,68,68,0.7)','rgba(0,212,170,0.7)'],borderColor:['rgba(96,165,250,1)','rgba(239,68,68,1)','rgba(0,212,170,1)'],borderWidth:1,borderRadius:4}]},options:mkOpts()});
+},200);
+})();
+
+// ---------- PANEL 5: RFM ----------
+(function(){
+const p5=DATA.panel5;
+const rfm=p5.rfm_rows;
+let rfmColors=['rgba(0,212,170,0.8)','rgba(96,165,250,0.8)','rgba(245,158,11,0.8)','rgba(239,68,68,0.7)','rgba(107,124,147,0.65)'];
+html+=`<div id="panel5" class="panel">
+<div class="panel-header"><h2>📊 五、绩效拆解（RFM分析）</h2><div class="desc">RFM模型将136万用户划分为5类价值客群，仅10.5%高价值用户贡献约39% GMV</div></div>
+${KPI(rfm.map((r,i)=>KC(['green','blue','amber','red','purple'][i],r.segment,`${r.user_pct}<span class="unit">%</span> <span style="font-size:11px;color:#6b7c93">用户</span>`,`GMV贡献${r.gmv_pct}%·均频${r.avg_freq}次`)))}
+${GRID([
+  '<div class="chart-box"><h3>👥 RFM五层分群·用户金字塔</h3><div class="chart-wrap"><canvas id="chart5_rfm"></canvas></div></div>',
+  '<div class="chart-box"><h3>📈 月度GMV趋势(25个月)</h3><div class="chart-wrap"><canvas id="chart5_kpi"></canvas></div></div>',
+])}
+${GRID([
+  '<div class="chart-box"><h3>📊 用户购买频次分布</h3><div class="chart-wrap"><canvas id="chart5_freq"></canvas></div></div>',
+  '<div class="chart-box"><h3>⏰ 最近购买天数分布</h3><div class="chart-wrap"><canvas id="chart5_recency"></canvas></div></div>',
+])}
+<div class="insight-cards">
+${INS('growth','⭐','频次弹性>>客单价弹性',`高频${rfm[0].avg_freq}次vs流失${rfm[rfm.length-1].avg_freq}次=<b>${Math.round(rfm[0].avg_freq/rfm[rfm.length-1].avg_freq)}倍差距</b>。客单价方差极小(99.5%用户锁死单一价格带)。<b>提升复购是核心增长抓手，比"提价"更有效且风险更低。</b>`)}
+${INS('opportunity','🎯','策略优先级',`①唤醒${rfm[2].user_pct}%潜在流失(${rfm[2].users.toLocaleString()}人)→②拉升${rfm[1].user_pct}%活跃用户频次→③稳住${rfm[0].user_pct}%高价值用户。唤醒+拉升的GMV提升空间>>提价。`)}
+${INS('action','📅','月度KPI基线',`25个月趋势:12月旺季峰值→1-2月低谷。线上占比稳定${p5.kpi_rows[p5.kpi_rows.length-1].online}%，周末占比${p5.kpi_rows[p5.kpi_rows.length-1].weekend}%。周期性规律为推送时机提供依据。`)}
+</div></div>`;
+
+setTimeout(()=>{
+// RFM bar
+new Chart(document.getElementById('chart5_rfm'),{type:'bar',data:{labels:rfm.map(r=>r.segment),datasets:[
+  {label:'用户占比%',data:rfm.map(r=>r.user_pct),backgroundColor:rfmColors.map(c=>c.replace('0.8','0.8').replace('0.7','0.7').replace('0.65','0.65')),borderColor:rfmColors.map(c=>c.replace('0.8','1').replace('0.7','0.9')),borderWidth:1,borderRadius:4,yAxisID:'y'},
+  {label:'GMV贡献%',data:rfm.map(r=>r.gmv_pct),backgroundColor:'rgba(0,212,170,0.3)',borderColor:'#00d4aa',borderWidth:2,borderDash:[5,5],type:'line',yAxisID:'y1'}
+]},options:mkOpts({scales:{x:{ticks:{color:'#4a5568',font:{size:11}},grid:{color:'rgba(255,255,255,0.04)'}},y:{position:'left',ticks:{color:'#60a5fa',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.04)'}},y1:{position:'right',ticks:{color:'#00d4aa',callback:v=>v+'%'},grid:{display:false},min:0,max:55}}})});
+// KPI line
+let krs=p5.kpi_rows;
+new Chart(document.getElementById('chart5_kpi'),{type:'line',data:{labels:krs.map(r=>r.month),datasets:[{label:'GMV',data:krs.map(r=>r.gmv),borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.05)',borderWidth:2,fill:true,tension:0.3,pointRadius:krs.map(r=>r.month.includes('-12')?7:(r.month.includes('-01')||r.month.includes('-02')?7:2)),pointBackgroundColor:krs.map(r=>r.month.includes('-12')?'#00d4aa':(r.month.includes('-01')||r.month.includes('-02')?'#ef4444':'#60a5fa'))}]},options:mkOpts()});
+// Freq hist
+let fh=p5.freq_hist;
+new Chart(document.getElementById('chart5_freq'),{type:'bar',data:{labels:fh.map(d=>d.range),datasets:[{label:'用户数',data:fh.map(d=>d.count),backgroundColor:COLORS.map(c=>c.replace('1)','0.7)')),borderColor:COLORS,borderWidth:1,borderRadius:4}]},options:mkOpts()});
+// Recency hist
+let rh=p5.rec_hist;
+new Chart(document.getElementById('chart5_recency'),{type:'bar',data:{labels:rh.map(d=>d.range),datasets:[{label:'用户数',data:rh.map(d=>d.count),backgroundColor:'rgba(167,139,250,0.7)',borderColor:'#a78bfa',borderWidth:1,borderRadius:4}]},options:mkOpts()});
+},300);
+})();
+
+// ---------- PANEL 6: 用户分析 ----------
+(function(){
+const p6=DATA.panel6;
+let catLabels=p6.cat_top10.map(d=>d.dept);
+let catData=p6.cat_top10.map(d=>d.count);
+let odPct=(p6.online_dom/p6.total_u*100).toFixed(0);
+let fdPct=(p6.offline_dom/p6.total_u*100).toFixed(0);
+let mxPct=(p6.mixed_ch/p6.total_u*100).toFixed(0);
+html+=`<div id="panel6" class="panel">
+<div class="panel-header"><h2>👤 六、用户分析</h2><div class="desc">依托14维特征宽表，挖掘用户品类、价格、时段消费规律，搭建标准化分层用户画像</div></div>
+${KPI([
+  KC('blue','⭐价格带集中度','99.5<span class="unit">%</span>','用户≥80%购买在单一价格带'),
+  KC('green','🖥️线上为主',odPct+'<span class="unit">%</span>',`${(p6.online_dom/10000).toFixed(0)}万人`),
+  KC('amber','🏪线下为主',fdPct+'<span class="unit">%</span>',`${(p6.offline_dom/10000).toFixed(0)}万人`),
+  KC('purple','📅周末占比',p6.weekend_pct+'<span class="unit">%</span>','高于均分14.3%预期'),
+])}
+${GRID([
+  '<div class="chart-box"><h3>📦 全球销量Top10品类</h3><div class="chart-wrap"><canvas id="chart6_cat"></canvas></div></div>',
+  '<div class="chart-box"><h3>📡 用户渠道偏好分布</h3><div class="chart-wrap"><canvas id="chart6_channel"></canvas></div></div>',
+])}
+${GRID([
+  BOX('💡 品类偏好建模创新',`<div style="font-size:11px;color:#94a3b8;line-height:2"><p style="color:#60a5fa;font-weight:600;font-size:13px;margin-bottom:6px">preference_score = user_ratio / global_ratio</p><p>不是"买得多就是喜欢"，而是看相对于全局的偏好程度:</p><p style="margin-top:6px;padding:8px;background:rgba(255,255,255,0.03);border-radius:6px">📌例:用户A买100件,10件Ladieswear(10%)<br>全球Ladieswear占50%→preference_score=10%/50%=<b style="color:#ef4444">0.2</b><br>实际上<b style="color:#ef4444">不偏好</b>Ladieswear!但只看绝对次数会误判</p><p style="margin-top:6px">&gt;1.0=偏好信号·&gt;2.0=强推荐信号</p></div>`),
+  BOX('🎯 用户画像宽表(14维)',TBL(['维度','字段','用途'],[
+    ['基础','age_group,club_member_status','人群细分'],
+    ['RFM','recency_days,frequency_total,monetary_total','价值分层'],
+    ['品类','preference_score,unique_departments','品类偏好'],
+    ['价格','price_band,monetary_avg_price','价格定位'],
+    ['渠道','online_ratio,channel_preference','触达策略'],
+    ['时间','weekend_ratio,avg_purchase_interval','推送时机'],
+  ])),
+])}</div>`;
+setTimeout(()=>{
+new Chart(document.getElementById('chart6_cat'),{type:'bar',data:{labels:catLabels,datasets:[{label:'销量',data:catData,backgroundColor:COLORS.map(c=>c.replace('1)','0.7)')),borderColor:COLORS,borderWidth:1,borderRadius:4}]},options:mkOpts({indexAxis:'y'})});
+new Chart(document.getElementById('chart6_channel'),{type:'doughnut',data:{labels:[`线上为主 ${odPct}%`,`线下为主 ${fdPct}%`,`混合渠道 ${mxPct}%`],datasets:[{data:[p6.online_dom,p6.offline_dom,p6.mixed_ch],backgroundColor:['rgba(96,165,250,0.8)','rgba(0,212,170,0.8)','rgba(245,158,11,0.8)'],borderColor:'#0f1535',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#6b7c93',font:{size:11},padding:14}}}}});
+},350);
+})();
+
+// ---------- PANEL 7: 渠道分析 ----------
+(function(){
+const p7=DATA.panel7;
+let ddLabels=p7.dept_diff10.map(d=>d.dept);
+let ddOnline=p7.dept_diff10.map(d=>d.diff>0?d.diff:0);
+let ddOffline=p7.dept_diff10.map(d=>d.diff<0?Math.abs(d.diff):0);
+let ageLabels=p7.age_data.map(d=>d.age);
+let ageData=p7.age_data.map(d=>d.online);
+html+=`<div id="panel7" class="panel">
+<div class="panel-header"><h2>📡 七、渠道分析</h2><div class="desc">交叉分析渠道与品类、价格、年龄的消费差异，输出渠道专属推荐方案</div></div>
+${KPI([
+  KC('blue','线上交易占比',p7.online_txn_pct+'<span class="unit">%</span>',`线下${(100-p7.online_txn_pct).toFixed(1)}%·线上客单价=线下${Math.round(p7.price_ratio*100)}%`),
+  KC('green','线上客单价',p7.online_avg_p.toFixed(4),'归一化价格'),
+  KC('amber','线下客单价',p7.offline_avg_p.toFixed(4),'归一化价格'),
+  KC('purple','线上/线下比',Math.round(p7.price_ratio*100)+'<span class="unit">%</span>','线上比价效应明显'),
+])}
+${GRID([
+  '<div class="chart-box"><h3>🏪 渠道×品类交叉(差异Top10)</h3><div class="chart-wrap"><canvas id="chart7_dept"></canvas></div></div>',
+  '<div class="chart-box"><h3>👴 各年龄段线上购物偏好</h3><div class="chart-wrap"><canvas id="chart7_age"></canvas></div></div>',
+])}
+${GRID([
+  BOX('💰 渠道×价格',`<div class="price-viz"><div class="pv-box"><div style="font-size:24px;font-weight:700;color:#60a5fa">🖥️ 线上</div><div class="pv-num" style="color:#fff;font-size:18px">${p7.online_avg_p.toFixed(5)}</div><div style="font-size:10px;color:#4a5568">归一化客单价</div></div><div class="pv-arrow">×${p7.price_ratio.toFixed(2)}</div><div class="pv-box"><div style="font-size:24px;font-weight:700;color:#00d4aa">🏪 线下</div><div class="pv-num" style="color:#fff;font-size:18px">${p7.offline_avg_p.toFixed(5)}</div><div style="font-size:10px;color:#4a5568">归一化客单价</div></div></div><p style="font-size:10px;color:#6b7c93;text-align:center">线上客单价为线下<b style="color:#f59e0b">${Math.round(p7.price_ratio*100)}%</b>·符合"线上比价、线下体验"行为逻辑</p>`),
+  BOX('🚀 分渠道推荐策略',TBL(['渠道','推荐策略','核心逻辑'],[
+    ['🖥️线上','高性价比基础款+高复购品类','价格敏感、偏好标准化(Jewellery/Knitwear)'],
+    ['🏪线下','当季新品+趋势款+高客单价','愿为体验付费(Swimwear/Jersey)'],
+    ['🔄混合型','根据online_ratio动态调整权重','历史渠道偏好预测当前推荐'],
+  ])),
+])}</div>`;
+setTimeout(()=>{
+new Chart(document.getElementById('chart7_dept'),{type:'bar',data:{labels:ddLabels,datasets:[{label:'线上偏高',data:ddOnline,backgroundColor:'rgba(96,165,250,0.7)',borderColor:'#60a5fa',borderWidth:1,stack:'stack'},{label:'线下偏高',data:ddOffline,backgroundColor:'rgba(0,212,170,0.7)',borderColor:'#00d4aa',borderWidth:1,stack:'stack'}]},options:mkOpts()});
+new Chart(document.getElementById('chart7_age'),{type:'bar',data:{labels:ageLabels,datasets:[{label:'线上占比%',data:ageData,backgroundColor:ageData.map((_,i)=>COLORS[i%COLORS.length].replace('1)','0.7)')),borderColor:ageData.map((_,i)=>COLORS[i%COLORS.length]),borderWidth:1,borderRadius:4}]},options:mkOpts()});
+},400);
+})();
+
+// ---------- PANEL 8: 推荐策略设计 ----------
+html+=`<div id="panel8" class="panel">
+<div class="panel-header"><h2>🎯 八、推荐策略设计</h2><div class="desc">5种推荐策略+召回/排序/重排三层架构，按用户状态分层使用</div></div>
+<div class="chart-box full"><h3>📋 推荐策略矩阵</h3>
+<table class="strategy-table"><tr><th>策略</th><th>名称</th><th>适用条件</th><th>推荐位占比</th><th>核心逻辑</th><th>可调参数</th></tr>
+<tr><td>0</td><td>热门兜底</td><td>新用户/无购买</td><td>100%</td><td>全局销量降序Top20</td><td>时间窗口</td></tr>
+<tr><td>1</td><td>混合探索</td><td>购买≤2次</td><td>60%+40%</td><td>热门为主+探索性推荐</td><td>热门/随机比例</td></tr>
+<tr><td>2</td><td>品类偏好</td><td>购买≥3次</td><td>40%(8位)</td><td>preference_score推荐偏好品类热销</td><td>TopN品类数</td></tr>
+<tr><td>3</td><td>价格带</td><td>购买≥3次</td><td>25%(5位)</td><td>匹配用户价格带±1档</td><td>价格箱数量</td></tr>
+<tr><td>4</td><td>协同过滤</td><td>购买≥5次</td><td>25%(5位)</td><td>Jaccard共购相似度</td><td>相似度阈值</td></tr>
+<tr><td>5</td><td>颜色偏好</td><td>购买≥3次</td><td>10%(2位)</td><td>偏好颜色组+同品类热销</td><td>TopN颜色数</td></tr></table></div>
+${GRID([
+  BOX('🔍 召回层(10万→200)',`<ul class="info-list"><li><b class="c1">双塔模型(DSSM)</b>:用户塔+商品塔→128维向量</li><li><b class="c2">FAISS向量检索</b>:10万商品建索引→Top200</li><li><b class="c3">品类规则召回补充</b>:偏好品类下热销强制进候选</li><li><b class="c4">多样性召回通道</b>:随机采样不同department热门</li></ul>`),
+  BOX('📊 排序层(200→50)',`<div style="font-size:11px;color:#94a3b8;line-height:2"><p><b style="color:#60a5fa">多目标排序</b>:CTR+CVR+ATC</p><p style="padding:10px;background:rgba(255,255,255,0.03);border-radius:6px;margin:8px 0">final_score=<b style="color:#00d4aa">0.3</b>×p_ctr+<b style="color:#f59e0b">0.5</b>×p_cvr+<b style="color:#a78bfa">0.2</b>×p_atc</p><p>权重来自敏感性分析:CVR权最高→直接指向GMV</p></div>`),
+])}
+<div class="chart-box full" style="margin-top:12px"><h3>🎛️ 重排层(50→20)</h3>
+${TBL(['规则','具体操作','目的'],[
+  ['🔴库存过滤','库存<阈值的商品降权或移除','避免推荐买不到的商品'],
+  ['🟡新品加权','冷启动商品(购买≤3次)加权<b>+15%</b>','给新品曝光机会,均衡库存'],
+  ['🔵品类打散','同品类(department)最多出现<b>3个</b>','避免推荐列表全是同类'],
+  ['🟣价格多样性','至少保留<b>2个</b>价格带的商品','覆盖不同预算需求'],
+  ['⚫去已购','过去<b>7天</b>已购买的商品降权','避免重复推荐'],
+])}</div></div>`;
+
+// ---------- PANEL 9: A/B测试框架 ----------
+html+=`<div id="panel9" class="panel">
+<div class="panel-header"><h2>🧪 九、A/B测试框架</h2><div class="desc">完整实验设计方案+7项评估指标体系+Thompson Sampling持续优化</div></div>
+${GRID([
+  BOX('⚙️ 实验设计方案',TBL(['要素','方案'],[
+    ['实验周期','<b>14天</b>(覆盖两个完整周+消除新奇效应)'],
+    ['分流方式','customer_id哈希取模→hash(id)%2==0→A组/==1→B组'],
+    ['对照组A(50%)','热门商品兜底推荐(按全局销量降序)'],
+    ['实验组B(50%)','完整推荐系统(品类偏好+价格带+协同过滤+重排)'],
+    ['AA验证','上线前两组用相同策略,确认分流均匀无偏'],
+    ['数据剔除','前2天标记为"新奇效应期",分析时做敏感性检验'],
+  ])),
+  BOX('📏 评估指标体系',TBL(['层级','指标','计算公式','优先级'],[
+    ['北极星','人均GMV','SUM(price)/COUNT(DISTINCT user)','⭐⭐⭐'],
+    ['核心','CTR','点击次数/曝光次数','⭐⭐⭐'],
+    ['核心','CVR','购买次数/曝光次数','⭐⭐⭐'],
+    ['观察','覆盖率','被推荐商品数/总商品数','⭐⭐'],
+    ['观察','多样性','推荐列表不同department数','⭐⭐'],
+    ['观察','冷启动曝光','冷启动商品曝光/总曝光','⭐⭐'],
+    ['诊断','客单价','GMV/购买订单数','⭐'],
+  ])),
+])}
+${GRID([
+  BOX('📊 显著性检验标准',TBL(['场景','判断','行动'],[
+    ['p<0.05,提升>5%','<span class="tag tag-done">✅有效</span>','全量上线'],
+    ['p<0.05,提升0~5%','<span class="tag tag-prog">⚠️微弱</span>','优化后再测'],
+    ['p<0.05,提升<0','<span style="color:#ef4444">❌有害</span>','立即下线'],
+    ['p≥0.05','<span style="color:#6b7c93">❓不确定</span>','延长实验/加大样本'],
+  ])),
+  BOX('🎰 MAB持续优化',`<div style="font-size:11px;color:#94a3b8;line-height:2"><p><b style="color:#60a5fa">Thompson Sampling</b>自动调整流量分配:</p><p style="margin-top:6px">·每个策略=一个"臂"</p><p>·臂的表现=Beta分布(购买次数+1,未购买次数+1)</p><p>·每次推荐从Beta分布采样→选采样值最大的策略</p><p style="margin-top:6px;color:#00d4aa">效果:好策略自动获更多流量,差策略自动减少</p></div>`),
+])}
+<div class="chart-box full" style="margin-top:12px"><h3>🎯 预期效果</h3>
+${TBL(['指标','预期提升','原因'],[
+  ['CTR(点击率)','<span class="hl">+10~20%</span>','品类偏好让推荐"更对胃口"'],
+  ['CVR(购买转化率)','<span class="hl">+8~15%</span>','价格带匹配降低"看了买不起"'],
+  ['推荐覆盖率','<span class="hl">+100~300%</span>','从只推热门→推长尾商品'],
+  ['冷启动商品曝光','<span class="hl">从0→5%</span>','重排层有意识给新品机会'],
+  ['人均GMV','<span class="hl">+5~10%</span>','CVR提升+价格带匹配的综合效果'],
+])}</div></div>`;
+
+// ---------- PANEL 10: 成果与展望 ----------
+(function(){
+const p5=DATA.panel5;
+const rfm=p5.rfm_rows;
+html+=`<div id="panel10" class="panel">
+<div class="panel-header"><h2>🏆 十、项目成果与展望</h2><div class="desc">核心数字摘要·交付物清单·面试追问应答·后续规划</div></div>
+${GRID([
+  BOX('🏅 核心数字摘要',TBL(['分析维度','核心发现'],[
+    ['数据规模','137万用户×10.5万商品×3178万交易(4.2GB)'],
+    ['商品长尾','<span class="wn">14.8%</span>商品≤5次,<span class="hl">7.4%</span>热门贡献53.5%销量'],
+    ['数据修正','Active:46万→<span class="hl">136万</span>(66%空但99.3%有交易)'],
+    ['RFM分群',`${rfm.map(r=>r.segment+r.user_pct+'%').join('·')}`],
+    ['GMV集中度','仅<span class="hl">10.5%</span>高价值用户贡献约<span class="hl">39%</span>GMV'],
+    ['增长抓手','频次弹性>>客单价弹性→<b>提升复购是核心</b>'],
+    ['价格带','<span class="hl">99.5%</span>用户≥80%购买集中在单一价格带'],
+    ['渠道价差','线上客单价=线下<span class="wn">0.77倍</span>'],
+  ])),
+  BOX('📦 交付物清单',TBL(['交付物','形式','状态'],[
+    ['01_data_pipeline.py','Python·~400行','<span class="tag tag-done">✅</span>'],
+    ['02_business_analysis.py','Python·~600行','<span class="tag tag-done">✅</span>'],
+    ['项目方案_H&M推荐系统.md','Markdown','<span class="tag tag-done">✅</span>'],
+    ['推荐策略设计文档_基于规则.md','Markdown','<span class="tag tag-done">✅</span>'],
+    ['数据分析工作思考过程.md','Markdown','<span class="tag tag-done">✅</span>'],
+    ['processed/(9CSV)','处理后数据~4.8GB','<span class="tag tag-done">✅</span>'],
+    ['business_analysis/(5文件)','分析结果','<span class="tag tag-done">✅</span>'],
+    ['交互HTML看板','本文件+数据','<span class="tag tag-done">✅</span>'],
+  ])),
+])}
+<div class="insight-cards">
+${INS('growth','💡','Q:"热门垄断、长尾消失怎么解决?"','三层开窗策略:①召回层品类偏好召回(40%位)→②重排层冷启动加权15%+品类打散(≤3个)→③长期MAB自动调整流量。核心思想:不消灭热门,而是在热门基础上"开窗"给长尾和新品。')}
+${INS('opportunity','📊','Q:"怎么确定提升复购比提价更有效?"','两个角度:①RFM数据—频次方差44倍(P25=3 vs P90=59),提升空间大;99.5%用户价格带锁定,提价可能流失。②业务逻辑—快时尚本质"高频低单价",提价违背品牌定位。')}
+${INS('action','🚀','Q:"项目最终落地了什么?"','三样东西:①两个可复用Python脚本(数据更新一键重跑)→②推荐策略设计文档(算法和产品可直接实现)→③交互HTML看板+Tableau看板(运营日常使用,不需找分析师取数)')}
+</div></div>`;
+})();
+
+// ============= RENDER =============
+document.getElementById('main').innerHTML=html;
+document.querySelector('.sidebar-nav a').classList.add('active');
+console.log('✅ All 10 panels rendered');
+
+// ============= Panel switching =============
+function switchPanel(pid){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const el=document.getElementById(pid);
+  if(el)el.classList.add('active');
+  document.querySelectorAll('.sidebar-nav a').forEach(a=>a.classList.remove('active'));
+  const link=document.querySelector(`.sidebar-nav a[href="#${pid}"]`);
+  if(link)link.classList.add('active');
+  setTimeout(()=>{Object.values(Chart.instances).forEach(c=>c.resize())},150);
+}
+</script>
+
+</body>
+</html>
