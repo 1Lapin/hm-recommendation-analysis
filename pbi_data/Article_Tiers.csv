@@ -1,0 +1,6 @@
+﻿Tier,Count
+ColdStart(<=3),11317
+LongTail(4-5),4347
+Regular(6-100),45412
+Hot(101-999),36662
+Blockbuster(>=1000),7804
