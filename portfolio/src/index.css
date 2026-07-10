@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0a0e27;
+  --color-surface: #11173d;
+  --color-surface-elevated: #181f4a;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-text-primary: #e0e6ed;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #5a6a88;
+  --color-accent: #60a5fa;
+  --color-accent-glow: rgba(96, 165, 250, 0.15);
+  --color-green: #00d4aa;
+  --color-green-glow: rgba(0, 212, 170, 0.15);
+  --color-amber: #f59e0b;
+  --color-red: #ef4444;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+img { max-width: 100%; height: auto; display: block; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+  html { font-size: 15px; }
+}
+
